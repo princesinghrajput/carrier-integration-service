@@ -1,5 +1,5 @@
 // Raw UPS API request/response shapes.
-// These types mirror the UPS Rating API v1 JSON structure.
+// These mirror the UPS Rating API JSON structure.
 // They should never be used outside the carriers/ups/ folder.
 
 export interface UpsRateRequest {
@@ -11,6 +11,7 @@ export interface UpsRateRequest {
             Shipper: UpsParty;
             ShipTo: UpsParty;
             ShipFrom: UpsParty;
+            PickupType: { Code: string };
             Package: UpsPackage[];
         };
     };

@@ -28,7 +28,7 @@ export class UpsProvider implements CarrierProvider {
 
         try {
             const response = await axios.post<UpsRateResponse>(
-                `${this.baseUrl}/api/rating/v1/Shop`,
+                `${this.baseUrl}/api/rating/v2403/Shop`,
                 body,
                 {
                     headers: {
