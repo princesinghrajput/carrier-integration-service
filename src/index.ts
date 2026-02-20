@@ -1,3 +1,4 @@
+// Public API surface. Only types and classes that external consumers need are exported here.
 export { ShippingService } from './ShippingService.js';
 export { UpsProvider } from './carriers/ups/UpsProvider.js';
 export { loadUpsConfig } from './config.js';

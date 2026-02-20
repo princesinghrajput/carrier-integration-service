@@ -51,11 +51,15 @@ export class UpsProvider implements CarrierProvider {
 
             return fromUpsRateResponse(response.data, this.name);
         } catch (error) {
+            // Re-throw our own errors (like CarrierApiError from the 200-check above) as-is
             if (!axios.isAxiosError(error)) {
                 throw new CarrierApiError('Unexpected error calling UPS Rating API');
             }
 
             const status = error.response?.status;
+
+            // Translate HTTP errors into structured domain errors
+            // so callers never deal with raw axios errors
 
             if (status === 401) {
                 throw new AuthError('UPS authentication failed', {
@@ -74,6 +78,7 @@ export class UpsProvider implements CarrierProvider {
                 });
             }
 
+            // No response at all means the request never reached UPS
             if (!error.response) {
                 throw new NetworkError('Could not reach UPS API', {
                     code: error.code,

@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+// All domain types are carrier-agnostic. No UPS/FedEx field names here.
+// Zod schemas serve as both runtime validation and TypeScript type source.
+
 export const WeightUnit = z.enum(['LBS', 'KGS']);
 export type WeightUnit = z.infer<typeof WeightUnit>;
 
@@ -11,6 +14,7 @@ export const AddressSchema = z.object({
     addressLine1: z.string().min(1),
     addressLine2: z.string().optional(),
     city: z.string().min(1),
+    // Supports international addresses (2-3 char province codes like 'ON', 'QC')
     stateOrProvince: z.string().min(2).max(3),
     postalCode: z.string().min(1),
     countryCode: z.string().regex(/^[A-Z]{2}$/),
@@ -41,6 +45,7 @@ export const ParcelSchema = z.object({
 
 export type Parcel = z.infer<typeof ParcelSchema>;
 
+// Price + currency bundled together so they can't be accidentally separated
 export const MoneySchema = z.object({
     amount: z.number().nonnegative(),
     currency: z.string().regex(/^[A-Z]{3}$/),

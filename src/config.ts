@@ -9,6 +9,7 @@ const UpsConfigSchema = z.object({
 
 export type UpsConfig = z.infer<typeof UpsConfigSchema>;
 
+// Fail fast at startup if any required env var is missing or invalid
 export function loadUpsConfig(): UpsConfig {
     const result = UpsConfigSchema.safeParse({
         clientId: process.env.UPS_CLIENT_ID,

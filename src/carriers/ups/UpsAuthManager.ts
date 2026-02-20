@@ -3,10 +3,13 @@ import type { UpsConfig } from '../../config.js';
 import type { UpsTokenResponse } from './types.js';
 import { AuthError } from '../../errors.js';
 
+// Handles UPS OAuth2 client-credentials flow.
+// Tokens are cached in memory and refreshed automatically before expiry.
 export class UpsAuthManager {
     private config: UpsConfig;
     private token: string | null = null;
     private expiresAt: number = 0;
+    // Prevents duplicate token requests when multiple getRates() calls happen at once
     private inFlightRequest: Promise<string> | null = null;
 
     constructor(config: UpsConfig) {
@@ -18,6 +21,7 @@ export class UpsAuthManager {
             return this.token;
         }
 
+        // If a fetch is already in progress, wait on that same promise
         if (this.inFlightRequest) {
             return this.inFlightRequest;
         }
@@ -50,6 +54,7 @@ export class UpsAuthManager {
 
             return this.token;
         } catch (error) {
+            // Clear cached token so next call triggers a fresh request
             this.token = null;
             this.expiresAt = 0;
 

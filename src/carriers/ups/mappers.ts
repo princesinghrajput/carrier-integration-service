@@ -1,7 +1,12 @@
+// This file is the translation boundary between our domain types and UPS API formats.
+// All UPS-specific field names and logic live here so nothing else needs to know about them.
+
 import type { RateRequest, RateQuote } from '../../domain.js';
 import type { UpsRateRequest, UpsRateResponse, UpsRatedShipment, UpsParty } from './types.js';
 import { CarrierApiError } from '../../errors.js';
 
+// Maps UPS numeric service codes to readable names
+// See: https://developer.ups.com/api/reference/rating
 const SERVICE_NAMES: Record<string, string> = {
     '01': 'Next Day Air',
     '02': '2nd Day Air',
@@ -22,6 +27,7 @@ function mapAddressToUps(address: RateRequest['origin']): UpsParty {
     if (address.addressLine2) lines.push(address.addressLine2);
 
     return {
+        // UPS can reject empty Name fields, so we default to 'N/A' when not provided
         Name: address.name ?? 'N/A',
         Address: {
             AddressLine: lines,
@@ -36,10 +42,10 @@ function mapAddressToUps(address: RateRequest['origin']): UpsParty {
 export function toUpsRateRequest(request: RateRequest): UpsRateRequest {
     const packages = request.parcels.map((parcel) => {
         const pkg: UpsRateRequest['RateRequest']['Shipment']['Package'][0] = {
-            PackagingType: { Code: '02' },
+            PackagingType: { Code: '02' }, // 02 = Customer Supplied Package
             PackageWeight: {
                 UnitOfMeasurement: { Code: parcel.weight.unit },
-                Weight: parcel.weight.value.toString(),
+                Weight: parcel.weight.value.toString(), // UPS requires string numeric fields
             },
         };
 
@@ -64,7 +70,7 @@ export function toUpsRateRequest(request: RateRequest): UpsRateRequest {
                 Shipper: mapAddressToUps(request.origin),
                 ShipTo: mapAddressToUps(request.destination),
                 ShipFrom: mapAddressToUps(request.origin),
-                PickupType: { Code: '01' },
+                PickupType: { Code: '01' }, // 01 = Daily Pickup
                 Package: packages,
             },
         },
@@ -77,6 +83,7 @@ function mapRatedShipment(shipment: UpsRatedShipment, carrierName: string): Rate
         throw new CarrierApiError('UPS shipment missing service code', { shipment });
     }
 
+    // Guard against corrupted monetary values - parseFloat('abc') returns NaN
     const amount = parseFloat(shipment.TotalCharges.MonetaryValue);
     if (isNaN(amount)) {
         throw new CarrierApiError('Invalid monetary value from UPS', {
@@ -85,7 +92,7 @@ function mapRatedShipment(shipment: UpsRatedShipment, carrierName: string): Rate
     }
 
     return {
-        carrier: carrierName,
+        carrier: carrierName, // Injected from provider, not hardcoded
         serviceName: SERVICE_NAMES[code] ?? `UPS Service ${code}`,
         serviceCode: code,
         totalCharge: {
@@ -99,6 +106,7 @@ function mapRatedShipment(shipment: UpsRatedShipment, carrierName: string): Rate
 }
 
 export function fromUpsRateResponse(response: UpsRateResponse, carrierName: string): RateQuote[] {
+    // UPS can return 200 OK with an unexpected body structure, so we validate before mapping
     if (!response?.RateResponse?.RatedShipment) {
         throw new CarrierApiError('UPS returned an invalid rate response', {
             response,

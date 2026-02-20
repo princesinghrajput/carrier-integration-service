@@ -1,3 +1,5 @@
+// Each error type maps to a specific failure mode callers can handle individually.
+// This avoids parsing error messages to figure out what went wrong.
 export type ErrorCode =
     | 'AUTH_FAILED'
     | 'VALIDATION_FAILED'
@@ -12,6 +14,7 @@ export class CarrierError extends Error {
         public readonly context?: Record<string, unknown>,
     ) {
         super(message);
+        // Required in Node.js for instanceof to work correctly with custom Error subclasses
         Object.setPrototypeOf(this, new.target.prototype);
         Error.captureStackTrace?.(this, this.constructor);
         this.name = 'CarrierError';
