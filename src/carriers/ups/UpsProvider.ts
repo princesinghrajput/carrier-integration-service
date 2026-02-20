@@ -39,7 +39,17 @@ export class UpsProvider implements CarrierProvider {
                 },
             );
 
-            return fromUpsRateResponse(response.data);
+            const data = response.data as unknown as Record<string, unknown>;
+
+            // UPS sometimes returns 200 with a business error body
+            const rateRes = data.RateResponse as Record<string, unknown> | undefined;
+            if (data.errors || rateRes?.Response?.hasOwnProperty('Error')) {
+                throw new CarrierApiError('UPS returned a business error', {
+                    data: response.data,
+                });
+            }
+
+            return fromUpsRateResponse(response.data, this.name);
         } catch (error) {
             if (!axios.isAxiosError(error)) {
                 throw new CarrierApiError('Unexpected error calling UPS Rating API');

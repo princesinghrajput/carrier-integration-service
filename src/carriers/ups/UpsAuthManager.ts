@@ -7,6 +7,7 @@ export class UpsAuthManager {
     private config: UpsConfig;
     private token: string | null = null;
     private expiresAt: number = 0;
+    private inFlightRequest: Promise<string> | null = null;
 
     constructor(config: UpsConfig) {
         this.config = config;
@@ -17,7 +18,15 @@ export class UpsAuthManager {
             return this.token;
         }
 
-        return this.fetchToken();
+        if (this.inFlightRequest) {
+            return this.inFlightRequest;
+        }
+
+        this.inFlightRequest = this.fetchToken().finally(() => {
+            this.inFlightRequest = null;
+        });
+
+        return this.inFlightRequest;
     }
 
     private async fetchToken(): Promise<string> {

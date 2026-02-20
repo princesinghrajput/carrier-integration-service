@@ -71,18 +71,25 @@ export function toUpsRateRequest(request: RateRequest): UpsRateRequest {
     };
 }
 
-function mapRatedShipment(shipment: UpsRatedShipment): RateQuote {
+function mapRatedShipment(shipment: UpsRatedShipment, carrierName: string): RateQuote {
     const code = shipment?.Service?.Code;
     if (!code) {
         throw new CarrierApiError('UPS shipment missing service code', { shipment });
     }
 
+    const amount = parseFloat(shipment.TotalCharges.MonetaryValue);
+    if (isNaN(amount)) {
+        throw new CarrierApiError('Invalid monetary value from UPS', {
+            value: shipment.TotalCharges.MonetaryValue,
+        });
+    }
+
     return {
-        carrier: 'UPS',
+        carrier: carrierName,
         serviceName: SERVICE_NAMES[code] ?? `UPS Service ${code}`,
         serviceCode: code,
         totalCharge: {
-            amount: parseFloat(shipment.TotalCharges.MonetaryValue),
+            amount,
             currency: shipment.TotalCharges.CurrencyCode,
         },
         ...(shipment.GuaranteedDelivery && {
@@ -91,12 +98,12 @@ function mapRatedShipment(shipment: UpsRatedShipment): RateQuote {
     };
 }
 
-export function fromUpsRateResponse(response: UpsRateResponse): RateQuote[] {
+export function fromUpsRateResponse(response: UpsRateResponse, carrierName: string): RateQuote[] {
     if (!response?.RateResponse?.RatedShipment) {
         throw new CarrierApiError('UPS returned an invalid rate response', {
             response,
         });
     }
 
-    return response.RateResponse.RatedShipment.map(mapRatedShipment);
+    return response.RateResponse.RatedShipment.map((s) => mapRatedShipment(s, carrierName));
 }
